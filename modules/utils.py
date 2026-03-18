@@ -1,8 +1,8 @@
-# Developed by Galal Noaman – RedShadow_V1
+# Developed by Galal Noaman – RedShadow_V2
 # For educational and lawful use only.
 # Do not copy, redistribute, or resell without written permission.
 
-# RedShadow_v1/modules/utils.py
+# RedShadow_v2/modules/utils.py
 
 import yaml
 import os

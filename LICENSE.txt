@@ -1,19 +1,41 @@
-Copyright © 2025 Galal Noaman. All rights reserved.
+Copyright © 2026 Galal Noaman. All rights reserved.
+
+RedShadow V2 — Red Team Reconnaissance & CVE Analysis Tool
+Contact: Jalalnoaman@gmail.com | GitHub: github.com/GalalNoaman/RedShadow_V2
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+LICENSE & USAGE TERMS
 
 This software is provided for educational and lawful use only.
 
 You are NOT permitted to:
-- Use this code or any part of it for commercial purposes
-- Modify, rebrand, or redistribute it publicly without written permission
-- Sell or sublicense the code
-- Remove author credit or project branding
+  - Use this code or any part of it for commercial purposes
+  - Modify, rebrand, or redistribute it publicly without written permission
+  - Sell or sublicense the code in any form
+  - Remove author credit or project branding
+  - Use this tool against systems you do not own or have explicit permission to test
 
 You MAY:
-- Use the code for personal study and non-commercial research
-- Run it privately in controlled, ethical environments
-- Share it with your university or for academic assessment purposes
+  - Use the code for personal study and non-commercial research
+  - Run it privately in controlled, ethical, and legal environments
+  - Share it with your university or for academic assessment purposes
+  - Fork it privately for personal learning
 
-Disclaimer:
-This software is provided “as is”, without any warranty. The author accepts no liability for misuse, damage, or illegal activity involving this code.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Contact: Jalalnoaman@gmail.com
+DISCLAIMER
+
+This software is provided "as is", without any warranty of any kind.
+The author accepts no liability for misuse, damage, data loss, or any
+illegal activity involving this tool.
+
+This tool is intended for:
+  - Bug bounty hunting on authorised programs
+  - Penetration testing with explicit written permission
+  - Academic research and personal skill development
+
+Unauthorised use against systems without permission is illegal and
+unethical. Always obtain proper authorisation before scanning any target.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

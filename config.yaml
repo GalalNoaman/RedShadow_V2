@@ -1,39 +1,51 @@
-# ─── RedShadow V1 Configuration File ───
-# Developed by Galal Noaman – RedShadow_V1
+# ─── RedShadow V2 Configuration File ───
+# Developed by Galal Noaman – RedShadow_V2
 # For educational and lawful use only.
-# Customize timeouts, ports, recon options, CVE analysis, and reporting.
 
 domain:
-  timeout: 20                # HTTP request timeout (seconds)
-  retries: 3                 # Retry attempts for HTTP or header fetch failures
-  delay: 2                   # Delay between retry attempts (seconds)
+  timeout: 20
+  retries: 3
+  delay: 2
   headers:
-    User-Agent: "RedShadowBot/1.0 (+https://github.com/GalalNoaman/RedShadow_V1)"
+    User-Agent: "RedShadowBot/2.0 (+https://github.com/GalalNoaman/RedShadow_V2)"
+
+bruteforce:
+  threads: 30                   # Parallel DNS resolution threads
+  dns_servers:
+    - "8.8.8.8"
+    - "1.1.1.1"
+    - "9.9.9.9"
+  timeout: 2                    # Per-resolve timeout (keep low for speed)
+  wordlist: null                # null = use built-in. Set path to use SecLists
 
 scan:
-  nmap_ports: "21-25,53,80,443,8080,8443"   # Common external ports
-  max_threads: 12                           # Max threads for DNS and Nmap parallel scans
-  dns_servers:                              # Primary + fallback resolvers
+  nmap_ports: "21-25,53,80,443,8080,8443"
+  nmap_args: "-sS -sV -T4 -Pn -n"   # Change -sS to -sT if not running as root
+  max_threads: 12
+  dns_servers:
     - "8.8.8.8"
     - "1.1.1.1"
     - "9.9.9.9"
     - "208.67.222.222"
-   # - "185.228.168.9"
-   # - "94.140.14.14" 
-   # - "45.90.28.0"  
 
 passive:
-  verify_ssl: false             # Don't block scans on cert errors (bug bounty-friendly)
-  delay: 0.5                    # Faster recon (can increase for stealth)
+  verify_ssl: false
+  delay: 0.5
 
 analyse:
-  cve_source: "data/cve_map.json"   # Path to CVE map (auto-loaded by analyse.py)
+  cve_source: "data/cve_map.json"
+  deduplicate: true             # Remove duplicate CVE matches (fixes current bug)
 
 report:
   include_cvss: true
   include_links: true
-  theme: "light"
+  theme: "dark"                 # Updated — HTML report is dark themed now
+
+pipeline:
+  skip_bruteforce: false        # Set true to always skip bruteforce stage
+  stop_on_empty: true           # Abort pipeline if no subdomains found
+  verbose: false
 
 defaults:
   output_dir: "outputs"
-  debug: false                  # Enable debug logging (planned)
+  debug: false

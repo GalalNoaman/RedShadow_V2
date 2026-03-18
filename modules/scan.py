@@ -1,4 +1,4 @@
-# Developed by Galal Noaman – RedShadow_V1
+# Developed by Galal Noaman – RedShadow_V2
 # For educational and lawful use only.
 
 import re
