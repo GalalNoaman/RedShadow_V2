@@ -5,4 +5,4 @@ python-nmap
 dnspython
 PyYAML
 packaging
-requests
+requestspython-dotenv

@@ -6,64 +6,13 @@
 
 import json
 import os
-import re
 from termcolor import cprint
-from packaging import version
 from modules.utils import load_config
+from modules.nvd import lookup_cves
 
 # Load config
-config = load_config(section="analyse")
+config  = load_config(section="analyse")
 cve_path = config.get("cve_source", "data/cve_map.json")
-
-
-def load_cve_map(path=cve_path):
-    try:
-        with open(path, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    except (FileNotFoundError, json.JSONDecodeError) as e:
-        print(f"[!] Failed to load CVE map: {e}")
-        return {}
-
-
-def version_in_range(v, range_string):
-    try:
-        if not v or v.lower() == "n/a":
-            return False
-        if range_string.strip().lower() == "x":
-            return True
-        if v.strip().lower() == "x":
-            return "x" in range_string.lower()
-
-        v_parsed = version.parse(v)
-
-        for r in range_string.split(","):
-            r = r.strip()
-            if r.startswith("<="):
-                if v_parsed <= version.parse(r[2:].strip()):
-                    return True
-            elif r.startswith("<"):
-                if v_parsed < version.parse(r[1:].strip()):
-                    return True
-            elif r.startswith(">="):
-                if v_parsed >= version.parse(r[2:].strip()):
-                    return True
-            elif r.startswith(">"):
-                if v_parsed > version.parse(r[1:].strip()):
-                    return True
-            elif "-" in r:
-                low, high = r.split("-")
-                if version.parse(low.strip()) <= v_parsed <= version.parse(high.strip()):
-                    return True
-            elif "x" in r:
-                prefix = r.replace(".x", ".")
-                if v.startswith(prefix):
-                    return True
-            else:
-                if v_parsed == version.parse(r.strip()):
-                    return True
-    except Exception:
-        return False
-    return False
 
 
 def normalize_product_name(product):
@@ -82,17 +31,20 @@ def normalize_product_name(product):
         "cloudinary": "cloudinary",
         "akamaighost": "akamai ghost",
         "akamai ghost": "akamai ghost",
-        "envoy": "envoy"
+        "envoy": "envoy",
+        "apache": "apache",
+        "openssl": "openssl",
+        "openssh": "openssh",
+        "wordpress": "wordpress",
+        "drupal": "drupal",
+        "joomla": "joomla",
     }
     return mappings.get(product, product)
 
 
 def deduplicate_cves(cve_list):
-    """
-    Removes duplicate CVEs from a list based on CVE ID.
-    Keeps the first occurrence of each unique CVE ID.
-    """
-    seen = set()
+    """Removes duplicate CVEs by CVE ID, keeps first occurrence."""
+    seen   = set()
     unique = []
     for cve in cve_list:
         cve_id = cve.get("cve", "")
@@ -109,7 +61,7 @@ def analyse_scan_results(input_file, output_file="outputs/analysis_results.json"
 
     try:
         with open(input_file, 'r', encoding='utf-8') as f:
-            raw = json.load(f)
+            raw  = json.load(f)
         data = raw.get("results", raw)
     except json.JSONDecodeError as error:
         print(f"[!] Failed to parse input JSON: {error}")
@@ -118,7 +70,6 @@ def analyse_scan_results(input_file, output_file="outputs/analysis_results.json"
         print(f"[!] Error reading input file: {error}")
         return
 
-    cve_map = load_cve_map()
     analysed = []
 
     for domain, info in data.items():
@@ -126,7 +77,7 @@ def analyse_scan_results(input_file, output_file="outputs/analysis_results.json"
             continue
 
         tech_matches = []
-        protocols = info.get("protocols", {})
+        protocols    = info.get("protocols", {})
 
         if not isinstance(protocols, dict):
             continue
@@ -139,7 +90,6 @@ def analyse_scan_results(input_file, output_file="outputs/analysis_results.json"
                 if not isinstance(port_data, dict):
                     continue
 
-                service          = port_data.get("service", "")
                 product          = port_data.get("product", "")
                 detected_version = port_data.get("version", "")
                 norm_name        = normalize_product_name(product)
@@ -147,18 +97,10 @@ def analyse_scan_results(input_file, output_file="outputs/analysis_results.json"
                 if not norm_name:
                     continue
 
-                matched_cves = []
+                cprint(f"  [→] Looking up CVEs for: {norm_name} {detected_version}", "cyan")
 
-                for tech_fp, cves in cve_map.items():
-                    tech_fp_norm = tech_fp.lower().strip()
-
-                    if tech_fp_norm in norm_name or norm_name in tech_fp_norm:
-                        for cve in cves:
-                            affected_versions = cve.get("affected_versions", "")
-                            if version_in_range(detected_version, affected_versions):
-                                matched_cves.append(cve)
-
-                # ── Deduplicate CVEs by CVE ID ──
+                # ── Live NVD lookup (with local fallback) ──
+                matched_cves = lookup_cves(norm_name, detected_version)
                 matched_cves = deduplicate_cves(matched_cves)
 
                 if matched_cves:
@@ -170,9 +112,9 @@ def analyse_scan_results(input_file, output_file="outputs/analysis_results.json"
 
         if tech_matches:
             analysed.append({
-                'url': domain,
-                'ip': info.get("ip", "N/A"),
-                'hostname': info.get("hostname", "N/A"),
+                'url':          domain,
+                'ip':           info.get("ip", "N/A"),
+                'hostname':     info.get("hostname", "N/A"),
                 'tech_matches': tech_matches
             })
 
@@ -183,20 +125,18 @@ def analyse_scan_results(input_file, output_file="outputs/analysis_results.json"
         for entry in analysed:
             cprint(f"[→] {entry['url']} ({entry['ip']})", "cyan")
             for match in entry['tech_matches']:
-                for cve in match['cves']:
-                    cve_id = cve.get("cve", "N/A")
-                    cvss   = cve.get("cvss", "?")
-                    url    = cve.get("url", "")
-                    cprint(f"    - {match['tech']} on port {match['port']} → {cve_id} (CVSS: {cvss})", "yellow")
-                    if url:
-                        print(f"      {url}")
+                cprint(f"    [{match['tech']} — port {match['port']}]", "white")
+                for cve in match['cves'][:5]:  # show top 5 per tech
+                    cve_id   = cve.get("cve", "N/A")
+                    cvss     = cve.get("cvss", "?")
+                    severity = cve.get("severity", "")
+                    cprint(f"      - {cve_id} (CVSS: {cvss} {severity})", "yellow")
 
     os.makedirs(os.path.dirname(output_file) if os.path.dirname(output_file) else ".", exist_ok=True)
 
     try:
         with open(output_file, 'w', encoding='utf-8') as out:
             json.dump(analysed, out, indent=2)
-        print(f"[✓] Analysis saved to {output_file}")
+        print(f"\n[✓] Analysis saved to {output_file}")
     except Exception as error:
         print(f"[!] Failed to write analysis output: {error}")
-        

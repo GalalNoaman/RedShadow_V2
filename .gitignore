@@ -21,3 +21,4 @@ __pycache__/
 # Ignore Jupyter checkpoints if any
 .ipynb_checkpoints/
 
+data/nvd_cache/
