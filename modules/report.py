@@ -83,9 +83,9 @@ def generate_report(input_file, output_file, html_output=None):
             report_lines.append("- **Detected Technologies & CVEs:**")
             for match in tech_matches:
                 tech = match.get("tech", "Unknown")
-                port = match.get("port", "N/A")
+                ports = ", ".join(match.get("ports", ["N/A"]))
                 cves = match.get("cves", [])
-                report_lines.append(f"  - `{tech}` on port `{port}`")
+                report_lines.append(f"  - `{tech}` on ports `{ports}`")
                 if cves:
                     for cve in cves:
                         cve_id = cve.get("cve", "Unknown")
@@ -153,7 +153,7 @@ def generate_report(input_file, output_file, html_output=None):
         cve_rows = ""
         for match in tech_matches:
             tech = match.get("tech", "Unknown")
-            port = match.get("port", "N/A")
+            ports = ", ".join(match.get("ports", ["N/A"]))
             cves = match.get("cves", [])
             if cves:
                 for cve in cves:
@@ -164,7 +164,7 @@ def generate_report(input_file, output_file, html_output=None):
                     cve_rows += f"""
                     <tr>
                         <td><code>{tech}</code></td>
-                        <td>{port}</td>
+                        <td>{ports}</td>
                         <td><a href="{cve_url}" target="_blank">{cve_id}</a></td>
                         <td><span class="badge {badge}">{cvss}</span></td>
                     </tr>"""
@@ -172,7 +172,7 @@ def generate_report(input_file, output_file, html_output=None):
                 cve_rows += f"""
                     <tr>
                         <td><code>{tech}</code></td>
-                        <td>{port}</td>
+                        <td>{ports}</td>
                         <td colspan="2" style="color:#888;">No CVEs matched</td>
                     </tr>"""
 

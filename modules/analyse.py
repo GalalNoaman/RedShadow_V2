@@ -10,8 +10,7 @@ from termcolor import cprint
 from modules.utils import load_config
 from modules.nvd import lookup_cves
 
-# Load config
-config  = load_config(section="analyse")
+config   = load_config(section="analyse")
 cve_path = config.get("cve_source", "data/cve_map.json")
 
 
@@ -38,6 +37,9 @@ def normalize_product_name(product):
         "wordpress": "wordpress",
         "drupal": "drupal",
         "joomla": "joomla",
+        "cloudflare": "cloudflare",
+        "cloudflare http proxy": "cloudflare",
+        "varnish": "varnish",
     }
     return mappings.get(product, product)
 
@@ -76,16 +78,17 @@ def analyse_scan_results(input_file, output_file="outputs/analysis_results.json"
         if not isinstance(info, dict):
             continue
 
-        tech_matches = []
-        protocols    = info.get("protocols", {})
-
+        protocols = info.get("protocols", {})
         if not isinstance(protocols, dict):
             continue
+
+        # ── Collect unique technologies across ALL ports ──
+        tech_seen    = {}   # norm_name → set of ports
+        tech_version = {}   # norm_name → detected version
 
         for proto, ports in protocols.items():
             if not isinstance(ports, dict):
                 continue
-
             for port, port_data in ports.items():
                 if not isinstance(port_data, dict):
                     continue
@@ -97,18 +100,31 @@ def analyse_scan_results(input_file, output_file="outputs/analysis_results.json"
                 if not norm_name:
                     continue
 
-                cprint(f"  [→] Looking up CVEs for: {norm_name} {detected_version}", "cyan")
+                if norm_name not in tech_seen:
+                    tech_seen[norm_name]    = set()
+                    tech_version[norm_name] = detected_version
 
-                # ── Live NVD lookup (with local fallback) ──
-                matched_cves = lookup_cves(norm_name, detected_version)
-                matched_cves = deduplicate_cves(matched_cves)
+                tech_seen[norm_name].add(str(port))
 
-                if matched_cves:
-                    tech_matches.append({
-                        'tech': norm_name,
-                        'port': port,
-                        'cves': matched_cves
-                    })
+        if not tech_seen:
+            continue
+
+        # ── Look up CVEs once per unique technology ──
+        tech_matches = []
+
+        for norm_name, ports in tech_seen.items():
+            version_str = tech_version.get(norm_name, "")
+            cprint(f"  [→] Looking up CVEs for: {norm_name} {version_str or 'x'}", "cyan")
+
+            matched_cves = lookup_cves(norm_name, version_str)
+            matched_cves = deduplicate_cves(matched_cves)
+
+            if matched_cves:
+                tech_matches.append({
+                    'tech':  norm_name,
+                    'ports': sorted(ports),
+                    'cves':  matched_cves
+                })
 
         if tech_matches:
             analysed.append({
@@ -125,12 +141,13 @@ def analyse_scan_results(input_file, output_file="outputs/analysis_results.json"
         for entry in analysed:
             cprint(f"[→] {entry['url']} ({entry['ip']})", "cyan")
             for match in entry['tech_matches']:
-                cprint(f"    [{match['tech']} — port {match['port']}]", "white")
-                for cve in match['cves'][:5]:  # show top 5 per tech
+                ports_str = ", ".join(match['ports'])
+                cprint(f"    [{match['tech']} — ports {ports_str}]", "white")
+                for cve in match['cves'][:5]:
                     cve_id   = cve.get("cve", "N/A")
                     cvss     = cve.get("cvss", "?")
                     severity = cve.get("severity", "")
-                    cprint(f"      - {cve_id} (CVSS: {cvss} {severity})", "yellow")
+                    cprint(f"      - {cve_id} (CVSS: {cvss} | {severity})", "yellow")
 
     os.makedirs(os.path.dirname(output_file) if os.path.dirname(output_file) else ".", exist_ok=True)
 

@@ -26,6 +26,31 @@ MAX_RESULTS   = 20  # max CVEs to fetch per product
 
 
 # ─────────────────────────────────────────
+# Severity Calculator
+# ─────────────────────────────────────────
+
+def calculate_severity(cvss_score):
+    """
+    Calculates severity label from CVSS score when API doesn't return one.
+    Based on NVD standard severity ranges.
+    """
+    try:
+        score = float(cvss_score)
+        if score >= 9.0:
+            return "CRITICAL"
+        elif score >= 7.0:
+            return "HIGH"
+        elif score >= 4.0:
+            return "MEDIUM"
+        elif score > 0.0:
+            return "LOW"
+        else:
+            return "NONE"
+    except Exception:
+        return "UNKNOWN"
+
+
+# ─────────────────────────────────────────
 # Cache Helpers
 # ─────────────────────────────────────────
 
@@ -177,6 +202,10 @@ def _parse_nvd_response(data, version_str=None):
                 cvss_data = metric_list[0].get("cvssData", {})
                 cvss      = cvss_data.get("baseScore", "N/A")
                 severity  = metric_list[0].get("baseSeverity", "UNKNOWN")
+
+                # ── Calculate severity if API returns UNKNOWN ──
+                if not severity or severity == "UNKNOWN":
+                    severity = calculate_severity(cvss)
                 break
 
         # ── Affected Versions ──
